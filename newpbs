@@ -1,0 +1,53 @@
+#!/bin/env bash
+
+set -e # stops script in case command fails
+set -u # stops script on undefined variables
+set -o pipefail # stops script if any command during a pipe fails
+
+# collect file name
+NAME=$1
+# create file
+touch $( pwd )/$NAME.pbs
+#make executable
+#chmod +x $( pwd )/$NAME.pbs
+
+NODES=${2:-1}
+PPN=${3:-8}
+WALLTIME=${4:-24:00:00}
+PMEM=${5:-4gb}
+
+echo '#PBS -l nodes='${NODES}':ppn='${PPN}'
+#
+#PBS -l walltime='${WALLTIME}'
+#
+#PBS -l pmem='${PMEM}'
+#
+#PBS -o ./pbs/'${NAME}'.stdout
+#PBS -e ./pbs/'${NAME}'.stderr
+#
+#PBS -N '${NAME}.job'
+#
+#PBS -M pzr3@psu.edu
+#
+#PBS -m bea
+#
+cd $PBS_O_WORKDIR
+#
+h=$(hostname)
+d=$(date)
+echo ""
+echo "Job ${PBS_JOBNAME} started on ${h} at ${d}"
+
+
+# Load modules for job
+module load
+
+# Job command(s)
+workon pydata
+
+echo ""
+d=$(date)
+echo "Job ended at ${d}"
+echo ""' > $( pwd )/$NAME.pbs
+
+exit

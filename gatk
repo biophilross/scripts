@@ -1,0 +1,8 @@
+#!/bin/bash
+
+#
+# this is a wrapper script that aims to make running gatk a little easier
+#
+java -jar ~/Llinaslab/phil/src/GenomeAnalysisTK-2.8-1-g932cd3a/GenomeAnalysisTK.jar $@
+
+exit

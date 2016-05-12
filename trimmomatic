@@ -1,0 +1,5 @@
+#!/bin/bash
+
+java -jar /usr/global/Trimmomatic/0.32/trimmomatic-0.32.jar $@
+
+exit

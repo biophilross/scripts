@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# halt in case of errors
+set -ue
+
+<<DESCRIPTION
+  Strips the fasta sequences from the end of a GFF file	
+DESCRIPTION
+
+
+# FUNCTIONS ###################################################################
+usage() {
+cat << EOF
+
+Usage: strip-fasta-from-gff -i [input.gff] -o [output.gff]
+
+EOF
+exit 1
+}
+
+echoerr() {
+	ecoh "$@\n" 1>&2;
+}
+
+
+# ARGS ########################################################################
+while getopts "i:o:" OPTION; do
+	
+	case $OPTION in
+    i)
+      GFF=$OPTARG
+      ;;
+    o)
+      OUT=$OPTARG
+      ;;
+		*)
+			usage
+			;;
+	esac
+done
+
+
+# RUN MAIN ####################################################################
+
+if [[ "$#" -eq 0  ]]
+then
+	usage
+fi
+
+line=$(cat -n $GFF | grep "##FASTA" | cut -f1)
+newline=$(expr $line - 1)
+head -n "${newline}" $GFF > $OUT
+
+exit

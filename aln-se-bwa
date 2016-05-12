@@ -1,0 +1,183 @@
+#!/bin/bash
+
+<<TODO
+  1) CallR script
+  2) Create directories for different files
+TODO
+
+set -e # stops script in case command failes
+set -u # stops script on undefined variables
+set -o pipefail # stops script if any command during a pipe fails
+
+<<DESCRIPTION
+  Script used to align single-end sequencing reads using bwa mem.
+
+  Will output sorted and indexed bam files, coverage statistics,
+  and coverage plots for viewing in IGV.
+
+	Author: Philipp Ross
+DESCRIPTION
+
+
+# ARGS ########################################################################
+while getopts "g:r:t:v" OPTION; do
+
+  case $OPTION in
+    g)
+      readonly REF="$OPTARG"
+      ;;
+    r)
+      readonly READS="$OPTARG"
+      ;;
+    t)
+      readonly THREADS="$OPTARG"
+      ;;
+    v)
+      print_versions
+      exit
+      ;;
+    h)
+      usage
+      exit
+      ;;
+    *)
+      usage
+      exit
+      ;;
+  esac
+done
+
+BWA=$(which bowtie2)
+SAMTOOLS=$(which samtools)
+BEDTOOLS=$(which bedtools)
+IGVTOOLS=$(which igvtools)
+CALLR=$(which Rscript)
+
+# FUNCTIONS ###################################################################
+
+function usage() {
+cat << EOF
+
+Usage: $(basename $0) -g [ref_genome.fasta] -r [reads.fastq] -t [threads]
+
+OPTIONS:
+-g          Reference genome split by chromosome in fasta format
+-r          Single end fastq file
+-t          Number of threads for bwa to utilize
+-v          Print dependency versions/check if dependencies are installed
+
+DEPENDENCIES: bwa samtools bedtools igvtools R
+
+EOF
+exit 1
+}
+
+function echoerr() {
+	echo "$@" 1>&2;
+}
+
+function print_versions() {
+
+  echoerr "Version numbers..."
+  echoerr ""
+  echoerr "bedtools:"
+  ${BEDTOOLS} --version
+  echoerr ""
+  echoerr "igvtools:"
+  ${IGVTOOLS} version
+  echoerr ""
+  echoerr "bwa:"
+  ${BWA} 2>&1 > /dev/null | grep --color=Never "Version"
+  echoerr ""
+  echoerr "samtools:"
+  ${SAMTOOLS} 2>&1 > /dev/null| grep --color=Never "Version"
+  echoerr ""
+
+}
+
+function main() {
+
+  local ref=$1; shift
+  local reads=$1; shift
+  local threads=$1;
+
+  # Align using bwa mem algorithm
+  echoerr ""
+  echoerr "Aligning ${reads} to ${ref} with bwa mem..."
+  echoerr ""
+  ${BWA} mem -t "${threads}" "${ref}" "${reads}" > tmp.sam
+  echoerr ""
+
+  # Convert to bam file
+  echoerr "Converting to BAM, sorting and indexing..."
+  echoerr ""
+  ${SAMTOOLS} view -Sb -h tmp.sam > tmp.bam
+
+  # Filter out mapped and unmapped reads
+  ${SAMTOOLS} view -b -f 4 tmp.bam > bwa.unmapped.bam
+  ${SAMTOOLS} view -b -F 4 tmp.bam > bwa.mapped.bam
+
+  # Sort and index bam files
+  ${SAMTOOLS} sort bwa.unmapped.bam bwa.unmapped
+  ${SAMTOOLS} sort bwa.mapped.bam bwa.mapped
+  ${SAMTOOLS} sort tmp.bam "bwa.${reads%.*}"
+  ${SAMTOOLS} index bwa.unmapped.bam
+  ${SAMTOOLS} index bwa.mapped.bam
+  ${SAMTOOLS} index "bwa.${reads%.*}.bam"
+
+  # Print basic alignment stats
+  echoerr ""
+  echoerr "Flagstat Output"
+  echoerr ""
+  ${SAMTOOLS} flagstat "bwa.${reads%.*}.bam"
+  echoerr ""
+  echoerr "Number of multi-mapped reads:"
+  ${SAMTOOLS} view -F 4 "bwa.${reads%.*}.bam" \
+    | awk '{print $1"\n"}' \
+    | sort \
+    | uniq -d > bwa.multimapped.txt
+
+  wc -l bwa.multimapped.txt
+  echoerr ""
+
+  # Create coverage statistics and plots
+
+  echoerr "Computing coverage statistics and plots..."
+  echoerr ""
+  # Create genome file for bedtools
+  ${SAMTOOLS} faidx "${ref}"
+  cut -f1,2 "${ref}.fai" > "${ref%.*}.genome"
+
+  # Compute depth of coverage at every nucleotide
+  ${BEDTOOLS} genomecov -ibam "bwa.${reads%.*}.bam" -g "${ref%.*}.genome" -d \
+    | awk 'BEGIN {OFS="\t"} {print $1,$2-1,$2,"coverage",$3}' > "bwa.${reads%.*}.cov"
+  cp "bwa.${reads%.*}.cov" "bwa.${reads%.*}.cov.igv"
+
+  # Convert to TDF to view in IGV
+  ${IGVTOOLS} toTDF -z 5 -f min,max,mean "bwa.${reads%.*}.cov.igv" "bwa.${reads%.*}.cov.tdf" "${ref}"
+
+  # Compute depth of coverage histogram for plotting in R
+  ${BEDTOOLS} genomecov -ibam "bwa.${reads%.*}.bam" -g "${ref%.*}.genome" > "bwa.${reads%.*}.cov.hist"
+
+  # Create coverage plot in R
+  #${CALLR} ~/src/misc/r/coverage_plot.R "bwa.${reads%.*}.cov.hist"
+
+  # Clean up
+  rm -rf tmp.*
+
+  exit
+
+}
+
+
+# RUN MAIN ####################################################################
+
+if [[ "$#" -eq 0 ]]
+then
+  usage
+  exit
+fi
+
+main "${REF}" "${READS}" "${THREADS}"
+
+exit

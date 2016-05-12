@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# halt in case of error
+set -ue
+
+java -jar /usr/global/picard-tools/1.99/$@
+
+exit

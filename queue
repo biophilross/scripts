@@ -1,0 +1,30 @@
+#!/bin/bash
+
+<<DESCRIPTION
+	Plain verison of queue command for parsing its output
+DESCRIPTION
+
+# halt script in case of errors
+
+# print date
+printf "\nDate: %s\n" "$( date )"
+
+# calculate total number of jobs subtracting first two lines
+TOTAL=$(qstat | wc -l | awk '{print $1 - $2}' )
+if [ $TOTAL -lt 0 ]; then
+	printf "\n No jobs appear to be running...\n"
+fi
+
+# print formatted information regarding jobs and users
+printf "\nNumber of Jobs: %d\n" $TOTAL
+printf "====================\n"
+printf "\n"
+printf "User Stats:\n"
+qstat | awk 'NR!=1&&NR!=2{print $3}' | sort | uniq -c | sort -gr
+printf "\n"
+printf "Queue Stats:\n"
+qstat | awk 'NR!=1&&NR!=2{print $5}' | sort | uniq -c | sort -gr
+printf "\n"
+printf ">>>>>>>>>>>>>>>>>>>>>>\n"
+
+exit

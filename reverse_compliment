@@ -1,0 +1,16 @@
+#!/bin/bash
+
+<<DESCRIPTION
+  Takes in a DNA sequence and gives you the reverse compliment
+  of that sequence
+DESCRIPTION
+
+# halt in case of errors
+set -ue
+
+while read line
+do
+	echo "$line" | tr "[ATGCatgcNn]" "[TACGtacgNn]" | rev
+done < <(cat "$@")
+
+exit

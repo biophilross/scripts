@@ -1,0 +1,67 @@
+#!/bin/bash
+
+<<DESCRIPTION
+  New project directory skeleton
+DESCRIPTION
+
+# halt script in case of errors
+set -u
+set -e
+
+# project directory
+PROJECTDIR="$( pwd )/$1"
+
+declare -a directories=("bin" "doc" "data" "results" "nb" "doc/notebook")
+declare -a files=("README" "data/README")
+
+# create project directories 
+for dir in ${directories[@]}; do
+  mkdir -p "${PROJECTDIR}/$dir"
+done
+
+# create project files
+for file in "${files[@]}"; do
+  touch "${PROJECTDIR}/$file"
+done
+
+# initialize git repository and create Makefile
+cd "$PROJECTDIR"
+[[ -f "$HOME/bin/newmake" ]] && "$HOME/bin/newmake" > "${PROJECTDIR}/Makefile" || echo "No Makefile made!"
+git init
+
+# make initial git commit
+git add .
+git commit -m "Initial commit made by newproj script"
+
+# create gitignore
+touch "${PROJECTDIR}/.gitignore"
+echo '# Folder view configuration files
+.DS_Store
+Desktop.ini
+
+# Thumbnail cache files
+._*
+Thumbs.db
+
+# Files that might appear on external disks
+.Spotlight-V100
+.Trashes
+
+# Compiled Python files
+*.pyc
+
+# Compiled C++ files
+*.out
+
+# Application specific files
+venv
+node_modules
+.sass-cache' > "${PROJETDIR}/.gitignore"
+
+# add to .repos file in home directory for gitall functionality
+# printf "$PROJECTDIR\n" >> /Users/philross/.repos
+
+# copy template files
+# cp $HOME/src/templates/* $PROJECTDIR/bin/
+
+exit

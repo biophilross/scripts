@@ -1,0 +1,79 @@
+#!/bin/bash
+
+set -e # stops script in case command failes
+set -u # stops script on undefined variables
+set -o pipefail # stops script if any command during a pipe fails
+
+<<DESCRIPTION
+  Wrapper script to run picard MarkDuplicates.jar
+
+	Author: http://methodicallyadventurous.com
+DESCRIPTION
+
+# QUOTE ALL PARAMETER EXPANSIONS
+
+# ARGS ########################################################################
+
+PICARD=$( which picard )
+RMDUP="false"
+
+while getopts "i:o:r" OPTION; do
+
+	case $OPTION in
+    i)
+      INFASTQ=$OPTARG
+      ;;
+    o)
+      OUTFASTQ=$OPTARG
+      ;;
+    r)
+      RMDUP="true"
+      ;;
+		h)
+			usage
+			exit
+			;;
+		*)
+			usage
+			exit
+			;;
+	esac
+done
+
+
+
+# FUNCTIONS ###################################################################
+
+function usage() {
+cat << EOF
+
+Usage: $(basename $0) -i [input.fastq] -o [output.fastq] OPTIONS
+
+OPTIONS:
+-i            Input fastq file name
+-o            Output fastq file name
+-r            Remove duplicates [false]
+-h            print usage
+
+DEPENDENCIES: picard wrapper script
+
+EOF
+exit 1
+}
+
+function echoerr() {
+	echo "$@" 1>&2;
+}
+
+
+# RUN MAIN ####################################################################
+
+if [[ "$#" -eq 0 ]]
+then
+  usage
+  exit
+fi
+
+$PICARD MarkDuplicates.jar I="${INFASTQ}" O="${OUTFSATQ}" M=picardrmdup-metrics.log REMOVE_DUPLICAES="${RMDUP}"
+
+exit

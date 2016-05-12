@@ -1,0 +1,178 @@
+#!/bin/bash
+
+<<TODO
+  1) CallR script
+  2) Create directories for different files
+TODO
+
+set -e # stops script in case command failes
+set -u # stops script on undefined variables
+#set -o pipefail # stops script if any command during a pipe fails
+
+<<DESCRIPTION
+  Script used to align single-end sequencing reads using bwa mem.
+
+  Will output sorted and indexed bam files, coverage statistics,
+  and coverage plots for viewing in IGV.
+
+	Author: http://methodicallyadventurous.com
+DESCRIPTION
+
+
+# ARGS ########################################################################
+while getopts "g:r:t:v" OPTION; do
+
+  case $OPTION in
+    g)
+      readonly REF="$OPTARG"
+      ;;
+    r)
+      readonly READS="$OPTARG"
+      ;;
+    t)
+      readonly THREADS="$OPTARG"
+      ;;
+    v)
+      print_versions
+      exit
+      ;;
+    h)
+      usage
+      exit
+      ;;
+    *)
+      usage
+      exit
+      ;;
+  esac
+done
+
+BOWTIE2=$(which bowtie2)
+SAMTOOLS=$(which samtools)
+BEDTOOLS=$(which bedtools)
+IGVTOOLS=$(which igvtools)
+CALLR=Rscript
+
+# FUNCTIONS ###################################################################
+
+function usage() {
+cat << EOF
+
+Usage: $(basename $0) -g [ref_genome.fasta] -r [reads.fastq] -t [threads]
+
+OPTIONS:
+-g          Reference genome split by chromosome in fasta format
+-r          Single end fastq file
+-t          Number of threads for bowtie2 to utilize
+-v          Print dependency versions/check if dependencies are installed
+
+DEPENDENCIES: bowtie2 samtools bedtools igvtools R
+
+EOF
+exit 1
+}
+
+function echoerr() {
+	echo "$@" 1>&2;
+}
+
+function print_versions() {
+
+  echoerr "Version numbers..."
+  echoerr ""
+  echoerr "bedtools:"
+  ${BEDTOOLS} --version
+  echoerr ""
+  echoerr "igvtools:"
+  ${IGVTOOLS} version
+  echoerr ""
+  echoerr "bowtie2:"
+  ${BOWTIE2} --version | head -1
+  echoerr ""
+  echoerr "samtools:"
+  ${SAMTOOLS} 2>&1 > /dev/null| grep --color=Never "Version"
+  echoerr ""
+
+}
+
+function main() {
+
+  local ref=$1; shift
+  local reads=$1; shift
+  local threads=$1;
+
+  echoerr ""
+  echoerr "Aligning ${reads} to ${ref} with bowtie2..."
+  echoerr ""
+  bowtie2 --threads "${threads}" -x "${ref}" -U "${reads}" -S tmp.sam
+  echoerr ""
+
+  # Convert to bam file
+  echoerr "Converting to BAM, sorting and indexing..."
+  echoerr ""
+  ${SAMTOOLS} view -Sb tmp.sam > tmp.bam
+
+  # Filter out mapped and unmapped reads
+  ${SAMTOOLS} view -b -f 4 tmp.bam > bowtie2.unmapped.bam
+  ${SAMTOOLS} view -b -F 4 tmp.bam > bowtie2.mapped.bam
+
+  # Sort and index bam files
+  ${SAMTOOLS} sort bowtie2.unmapped.bam bowtie2.unmapped
+  ${SAMTOOLS} sort bowtie2.mapped.bam bowtie2.mapped
+  ${SAMTOOLS} sort tmp.bam "bowtie2.${reads%.*}"
+  ${SAMTOOLS} index bowtie2.unmapped.bam
+  ${SAMTOOLS} index bowtie2.mapped.bam
+  ${SAMTOOLS} index "bowtie2.${reads%.*}.bam"
+
+  # Collect multi-mapped reads
+  echoerr ""
+  echoerr "Number of multi-mapped reads:"
+  ${SAMTOOLS} view -F 4 "bowtie2.${reads%.*}.bam" \
+    | awk '{print $1"\n"}' \
+    | sort \
+    | uniq -d > bowtie2.multimapped.txt
+
+  wc -l bowtie2.multimapped.txt
+  echoerr ""
+
+  # Create coverage statistics and plots
+
+  echoerr "Computing coverage statistics and plots..."
+  echoerr ""
+  # Create genome file for bedtools
+  ${SAMTOOLS} faidx "${ref}"
+  cut -f1,2 "${ref}.fai" > "${ref%.*}.genome"
+
+  # Compute depth of coverage at every nucleotide
+  ${BEDTOOLS} genomecov -ibam "bowtie2.${reads%.*}.bam" -g "${ref%.*}.genome" -d \
+    | awk 'BEGIN {OFS="\t"} {print $1,$2-1,$2,"coverage",$3}' > "bowtie2.${reads%.*}.cov"
+  cp "bowtie2.${reads%.*}.cov" "bowtie2.${reads%.*}.cov.igv"
+
+  # Convert to TDF to view in IGV
+  ${IGVTOOLS} toTDF -z 5 -f min,max,mean "bowtie2.${reads%.*}.cov.igv" "bowtie2.${reads%.*}.cov.tdf" "${ref}"
+
+  # Compute depth of coverage histogram for plotting in R
+  ${BEDTOOLS} genomecov -ibam "bowtie2.${reads%.*}.bam" -g "${ref%.*}.genome" > "bowtie2.${reads%.*}.cov.hist"
+
+  # Create coverage plot in R
+  ${CALLR} ~/src/misc/r/coverage_plot.R "bowtie2.${reads%.*}.cov.hist"
+
+  # Clean up
+  rm -rf tmp.*
+
+  exit
+
+}
+
+
+# RUN MAIN ####################################################################
+
+if [[ "$#" -eq 0 ]]
+then
+  usage
+  exit
+fi
+
+main "${REF}" "${READS}" "${THREADS}"
+
+exit

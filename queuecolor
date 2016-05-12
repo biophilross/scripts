@@ -1,0 +1,48 @@
+#!/bin/bash
+
+<<DESCRIPTION
+	Just a more nicely formatted output of the qstat command
+DESCRIPTION
+
+# halt script in case of errors
+set -ue
+
+# set color variables
+RESTORE='\033[0m'
+RED='\033[00;31m'
+GREEN='\033[00;32m'
+YELLOW='\033[00;33m'
+BLUE='\033[00;34m'
+PURPLE='\033[00;35m'
+CYAN='\033[00;36m'
+LIGHTGRAY='\033[00;37m'
+LRED='\033[01;31m'
+LGREEN='\033[01;32m'
+LYELLOW='\033[01;33m'
+LBLUE='\033[01;34m'
+LPURPLE='\033[01;35m'
+LCYAN='\033[01;36m'
+WHITE='\033[01;37m'
+
+# print date
+printf "\n${GREEN}Date:${RESTORE} ${YELLOW}%s${RESTORE}\n" "$( date )"
+
+# calculate total number of jobs subtracting first two lines
+TOTAL=$( qstat | wc -l | awk '{print $1 - 2}' )
+if [ $TOTAL -lt 0 ]; then
+	printf "\n${RED}No jobs appear to be running...${RESTORE}\n"
+fi
+
+# print formatted information regarding jobs and users
+printf "\n${GREEN}Number of Jobs:${RESTORE} ${YELLOW}%d${RESTORE}\n" $TOTAL
+printf "===================\n"
+printf "\n"
+printf "${GREEN}User Stats:${RESTORE}\n"
+qstat | awk 'NR!=1&&NR!=2{print $3}' | sort | uniq -c | sort -gr
+printf "\n"
+printf "${GREEN}Queue Stats:${RESTORE}\n"
+qstat | awk 'NR!=1&&NR!=2{print $5}' | sort | uniq -c | sort -gr
+printf "\n"
+printf ">>>>>>>>>>>>>>>>>>>>>\n"
+
+exit
