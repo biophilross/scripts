@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# collect file name
+NAME=$1
+# create file
+touch $( pwd )/$NAME
+#make executable
+chmod +x $( pwd )/$NAME
+
+# add lines to file
+echo '#!/bin/bash
+
+set -euo pipefail
+
+<<DESCRIPTION
+
+
+	Author: Philipp Ross, philippross369@gmail.com
+DESCRIPTION
+
+# USAGE #######################################################################
+
+function usage() {
+cat << EOF
+
+Usage: $(basename $0)
+
+OPTIONS:
+-h          print usage
+
+EOF
+exit 1
+}
+
+# No arguments, print usage
+if [[ "$#" -eq 0 ]]
+then
+  usage
+  exit
+fi
+
+# ARGS ########################################################################
+
+while getopts "h" OPTION; do
+
+	case $OPTION in
+		h)
+			usage
+			exit
+			;;
+		*)
+			usage
+			exit
+			;;
+	esac
+done
+
+
+# FUNCTIONS ###################################################################
+
+function echoerr() {
+	echo "$@" 1>&2;
+}
+
+exit' > $( pwd )/$NAME
+
+exit

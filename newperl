@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# halt in case of errors
+set -ue
+
+# collect file name
+NAME=$1
+
+# create file
+touch $( pwd )/$NAME.pl
+# make executable
+chmod +x $( pwd )/$NAME.pl
+
+# add lines to file
+echo '#!/usr/bin/perl -w
+
+# good coding practice
+use strict;
+use warnings;
+
+# load modules
+use Getopt::Long;
+
+# collect inputs
+my ($help, $input);
+
+# display usage information if necessary
+&usage() if (@ARGV < # or
+	! GetOptions(
+	"help|h"   => \$help,
+	"input|i:s" => \$input
+) or defined ($help));
+
+
+# RUN MAIN #################################################################### 
+
+&main($input);
+
+
+# SUBROUTINES #################################################################
+
+sub main {
+
+	
+
+}
+
+
+sub usage {
+	print STDOUT "\nUnknown Options: @_\n" if (@_);
+	print STDOUT "\nUsage: perl '${NAME}.pl' -i <input_file\n>";
+	print STDOUT "\n";
+	print STDOUT "perl '${NAME}.pl' --help or -h will print this message\n";
+	exit;
+}
+
+exit;' > $( pwd )/$NAME.pl
+
+exit

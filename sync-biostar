@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+set -eu
+
+if [[ $# -ne 1 ]]; then
+	echo -e "\nUsage: $(basename $0) <project_dir>\n"
+	echo -e "Run this to sync your <project_dir> locally"
+	echo -e "with the <project_dir> of the same name on biostar\n"
+	exit
+fi
+
+tmp=$1
+source=$(echo "$(basename $tmp)" | sed 's/\/$//g')
+
+rsync --archive \
+	--verbose \
+	--progress \
+	--human-readable \
+	--compress \
+	--checksum \
+	--exclude=".DS_Store" \
+	--delete-after \
+	--delete-excluded \
+	--log-file="$HOME/logs/biostar-rsync.log" \
+	-e ssh \
+	${source} \
+	pzr3@biostar.psu.edu:~/phil/projects/
+
+#rsync --archive \
+#	--verbose \
+#	--progress \
+#	--human-readable \
+#	--compress \
+#	--checksum \
+#	--exclude=".DS_Store" \
+#	--delete-excluded \
+#	-e ssh \
+#	${source} \
+#	pzr3@biostar.psu.edu:~/phil/projects/backups/${source}_backup
+
+exit

@@ -1,0 +1,66 @@
+#!/bin/bash
+
+set -eu
+
+if [[ $# -ne "2" ]]; then
+	echo -e "\nUsage: $(basename $0) <attributes> <input.gff>\n"
+	echo -e "Use this to parse the attributes colum and output."
+	echo -e "in tab separated format. Split attributes by comma\n"
+	exit 1
+fi
+
+ATTRIBUTES=$1
+INPUT=$2
+
+# begin awk script
+awk -v var=$ATTRIBUTES '
+BEGIN {
+	FS=OFS="\t"
+}
+
+$0 !~ /^#/ {
+
+	split($9, attrs, ";")
+
+	for (i in attrs) {
+		split(attrs[i], pair, "=")
+
+		gsub("[+]", " ", pair[2])
+		gsub("%27", "`", pair[2])
+		gsub("%28", "(", pair[2])
+		gsub("%29", ")", pair[2])
+		gsub("%2A", "*", pair[2])
+		gsub("%2B", "+", pair[2])
+		gsub("%2C", ",", pair[2])
+		gsub("%2D", "-", pair[2])
+		gsub("%2E", ".", pair[2])
+		gsub("%2F", "/", pair[2])
+		gsub("%3A", ":", pair[2])
+		gsub("%3F", "?", pair[2])
+		gsub("%5B", "[", pair[2])
+		gsub("%5D", "]", pair[2])
+
+		alist[pair[1]] = pair[2]
+	}
+
+	split(var, ids, ",")
+	
+	output = ""
+
+	for (i in ids) {
+		if (ids[i] in alist) {
+			output = output"\t"alist[ids[i]]
+		}
+		else {
+			print ""
+			print "Line "NR" has no attribute "ids[i]"! See below"
+			print ""
+			print $0
+			exit
+		}
+	}
+
+	print $1,$2,$3,$5,$5,$6,$7,$8""output
+}
+' $INPUT
+

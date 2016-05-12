@@ -1,0 +1,47 @@
+#!/bin/bash
+
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+	echo -e ""
+	echo -e "Usage: $(basename $0) <gene_list> <interval_file> [bed | gff]"
+	echo -e ""
+	echo -e "Use this script to extract intervals with IDs or"
+	echo -e "names contained within <gene_list>. Assumes gff3 input"
+	echo -e ""
+	exit
+fi
+
+# define main
+main() {
+	
+	local list=$1; shift
+	local intervals=$1; shift
+	local format=${1:-"gff"}
+
+	if [[ $format == "bed" ]]; then
+
+		for gene in $(cat $list); do
+			awk -v gene=$gene 'BEGIN {OFS=FS="\t"} $4 ~ gene {print $0}' $intervals
+		done
+
+	elif [[ $format == "gff" ]]; then
+
+		for gene in $(cat $list); do
+			awk -v gene=$gene 'BEGIN {OFS=FS="\t"} $9 ~ gene {print $0}' $intervals
+		done
+
+	else
+		echo "ERROR: $format is not a valid choice...bed or gff"
+		exit
+
+	fi
+
+}
+
+# call main
+list=$1; shift
+intervals=$1; shift
+format=${1:-"gff"}
+
+main $list $intervals $format

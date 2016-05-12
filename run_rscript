@@ -1,0 +1,8 @@
+#!/bin/bash
+
+<< DESCRIPTION
+This script is a wrapper for running R scripts from the command line using
+my docker image, 'satrn'. Can be useful for reproducibility purposes.
+DESCRIPTION
+
+docker run --rm=true -it -m 4096m -v $PWD:$PWD thephilross/satrn bash run_rscript.sh $PWD $@

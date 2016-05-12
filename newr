@@ -1,0 +1,38 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# collect file name
+NAME=$1
+# create file
+touch $( pwd )/"${NAME}.R"
+# make executable
+chmod +x $( pwd )/"${NAME}.R"
+
+# add lines to file
+echo '#Description:
+#
+#Version - 1.0
+#Author  - Philipp Ross
+#License - BSD License
+
+# clear envrinment
+rm(list=ls())
+
+options(echo=FALSE) # change to TRUE if you want arguments in output file
+args <- commandARgs(trailingOnly = TRUE)
+
+if (length(args) != #) {
+	  cat("\nscript.R\n\n")
+		cat("Default usage message: CHANGE ME!!\n")
+		cat("\n")
+		q(save = "no", status = 1)
+}
+
+# imports
+library("", warn.conflicts = F, quietly = T)
+
+#signal success and exit.
+q(status=0)' > $( pwd )/"${NAME}.R"
+
+exit

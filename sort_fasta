@@ -1,0 +1,37 @@
+#!/bin/bash
+
+set -euo pipefail
+
+if [[ $# -ne 2 ]]; then
+	echo ""
+	echo -e "Usage: $(basename $0) <in.fasta> <sorted_out.fasta>"
+	echo ""
+	echo -e "Provide a multi fasta file and sort it by sequence ID"
+	echo ""
+	exit
+fi
+
+FASTA=$1
+OUT=$2
+
+tmp=$(mktemp /tmp/fasta.XXXXX)
+
+# if the output file already exists delete it
+# because you're appending to it below
+if [[ -e "$OUT" ]]; then
+	rm -rf "$OUT"
+	touch "$OUT"
+fi
+
+# loop through ids and print them in order
+# along with their sequence
+for id in $(grep ">" "$FASTA" | cut -f1 -d " " | sort | sed 's/>//g'); do 
+
+	sed -n -e "/$id/,/>/ p" "$FASTA" > "$tmp" 
+	head -n $(wc -l "$tmp" | awk '{print $1 - 1}') "$tmp" | \
+	cut -f1 -d " " >> $OUT
+
+done
+
+# clean up
+rm -rf "$tmp"

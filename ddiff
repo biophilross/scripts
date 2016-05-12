@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+# Author: Phil Ross philippross369@gmail.com
+
+set -eu
+
+if [[ $# -ne 2 || $1 == "-h" || $1 == "--help" ]]; then
+	echo -e "\nUsage: $(basename $0) <dir1> <dir2>\n"
+	echo -e "Check what files between <dir1> and <dir2> are different"
+	echo -e "Can compare remote directories as well\n"
+	exit
+fi
+
+dir1=$1
+dir2=$2
+
+rsync -nav --progress -e ssh $dir1 $dir2

@@ -1,0 +1,50 @@
+#!/bin/bash
+
+set -e # stops script in case command failes
+set -u # stops script on undefined variables
+set -o pipefail # stops script if any command during a pipe fails
+
+# collect file name
+NAME=$1
+
+# create file
+touch "$(pwd)/$NAME.py"
+# make executable
+chmod +x "$(pwd)/$NAME.py"
+
+# add lines to file
+echo '#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# import modules
+import os
+import sys
+import argparse
+
+def main():
+
+	parser = argparse.ArgumentParser(description = "")
+	parser.add_argument("-i", dest = "input_name", help = "Input filename")
+	if len(sys.argv)==1:
+		parser.print_help()
+		sys.exit(1)
+	args = parser.parse_args()
+
+	if args.input_name:
+		f = open(args.input_name, "r")
+	else:
+		f = sys.stdin
+
+	for line in f:
+		line.rstrip()
+		sys.stdout.write(line)
+	
+
+if __name__ == "__main__":
+	try:
+		main()
+	except KeyboardInterrupt:
+		sys.stderr.write("User interrupt! Ciao!\n")
+		sys.exit(0)' > "$(pwd)/$NAME.py"
+
+exit
