@@ -1,9 +1,4 @@
-#!/bin/bash
-
-<<TODO
-  1) CallR script
-  2) Create directories for different files
-TODO
+#!/usr/bin/env bash
 
 set -e # stops script in case command failes
 set -u # stops script on undefined variables
@@ -47,12 +42,6 @@ while getopts "g:r:t:v" OPTION; do
   esac
 done
 
-BWA=$(which bowtie2)
-SAMTOOLS=$(which samtools)
-BEDTOOLS=$(which bedtools)
-IGVTOOLS=$(which igvtools)
-CALLR=$(which Rscript)
-
 # FUNCTIONS ###################################################################
 
 function usage() {
@@ -61,12 +50,11 @@ cat << EOF
 Usage: $(basename $0) -g [ref_genome.fasta] -r [reads.fastq] -t [threads]
 
 OPTIONS:
--g          Reference genome split by chromosome in fasta format
+-i          BWA index
 -r          Single end fastq file
--t          Number of threads for bwa to utilize
--v          Print dependency versions/check if dependencies are installed
+-t          Number of threads
 
-DEPENDENCIES: bwa samtools bedtools igvtools R
+DEPENDENCIES: bwa samtools bedtools igvtools
 
 EOF
 exit 1
@@ -74,25 +62,6 @@ exit 1
 
 function echoerr() {
 	echo "$@" 1>&2;
-}
-
-function print_versions() {
-
-  echoerr "Version numbers..."
-  echoerr ""
-  echoerr "bedtools:"
-  ${BEDTOOLS} --version
-  echoerr ""
-  echoerr "igvtools:"
-  ${IGVTOOLS} version
-  echoerr ""
-  echoerr "bwa:"
-  ${BWA} 2>&1 > /dev/null | grep --color=Never "Version"
-  echoerr ""
-  echoerr "samtools:"
-  ${SAMTOOLS} 2>&1 > /dev/null| grep --color=Never "Version"
-  echoerr ""
-
 }
 
 function main() {
@@ -105,7 +74,7 @@ function main() {
   echoerr ""
   echoerr "Aligning ${reads} to ${ref} with bwa mem..."
   echoerr ""
-  ${BWA} mem -t "${threads}" "${ref}" "${reads}" > tmp.sam
+  ${BWA} mem -t -a "${threads}" "${ref}" "${reads}" > tmp.sam
   echoerr ""
 
   # Convert to bam file
@@ -153,14 +122,8 @@ function main() {
     | awk 'BEGIN {OFS="\t"} {print $1,$2-1,$2,"coverage",$3}' > "bwa.${reads%.*}.cov"
   cp "bwa.${reads%.*}.cov" "bwa.${reads%.*}.cov.igv"
 
-  # Convert to TDF to view in IGV
-  ${IGVTOOLS} toTDF -z 5 -f min,max,mean "bwa.${reads%.*}.cov.igv" "bwa.${reads%.*}.cov.tdf" "${ref}"
-
   # Compute depth of coverage histogram for plotting in R
   ${BEDTOOLS} genomecov -ibam "bwa.${reads%.*}.bam" -g "${ref%.*}.genome" > "bwa.${reads%.*}.cov.hist"
-
-  # Create coverage plot in R
-  #${CALLR} ~/src/misc/r/coverage_plot.R "bwa.${reads%.*}.cov.hist"
 
   # Clean up
   rm -rf tmp.*

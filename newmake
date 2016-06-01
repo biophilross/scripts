@@ -1,97 +1,33 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# halt in case of errors
-set -u # stops script in case command fails
-set -e # stops script on undefined variables
+set -euo pipefail
 
 # create file
 touch $( pwd )/Makefile
 
 # add lines to file
-echo '# Makefile for data analysis workflow
+echo "# Makefile for data analysis
 
-# VARIABLES ###################################################################
-
-# Directories
-WORKDIR      := $(CURDIR)
-BIN          := $(WORKDIR)/bin
-DATA         := $(WORKDIR)/data
-RESULTS      := $(WORKDIR)/results
-PF3D7        := $(DATA)/pf3d7
-# Annotation files
-GFFWITHFASTA := $(PF3D7)/plasmodb.gff
-GFF          := $(PF3D7)/pf3d7v11.0.gff
-GENES        := $(PF3D7)/genes.gff
-EXONS        := $(PF3D7)/exons.gff
-MRNAS        := $(PF3D7)/mrnas.gff
-INTRONS      := $(PF3D7)/introns.bed
-INTERGENIC   := $(PF3D7)/intergenic.bed
-# Sequence files
-GENOME       := $(PF3D7)/genome.fasta
-GENOMEIDX    := $(PF3D7)/genome.fasta.fai
-BEDGENOME    := $(PF3D7)/lengths.genome
-TRANSCRIPTS  := $(PF3D7)/transcripts.fasta
-# Text files
-ALIASES      := $(PF3D7)/aliases.txt
+## VARIABLES -------------------------------------------------------------------
 
 
-# HELP ########################################################################
+## HELP ------------------------------------------------------------------------
 help:
-	@echo "Makefile for a data analysis workflow"
-	@echo ""
-	@echo "Usage:"
-	@echo "    make help           display this help message"
-	@echo "    make get-data       download relevant data"
-	@echo "    make edit-data      format and clean data"
-	@echo "    make clean-results  delete everything in results directory"
-	@echo ""
+	@echo 'Makefile for a data analysis workflow'
+	@echo ''
+	@echo 'Usage:'
+	@echo '    make help           display this help message'
+	@echo ''
 
 
-# RUN ALL #####################################################################
-all: get-data edit-data
+## RUN ALL ---------------------------------------------------------------------
+all: 
 
 
-# GET-DATA ####################################################################
-get-data: get-gff get-genome get-transcripts get-aliases
-
-get-gff:
-	wget http://plasmodb.org/common/downloads/release-11.0/Pfalciparum3D7/gff/data/PlasmoDB-11.0_Pfalciparum3D7.gff -O $(GFFWITHFASTA)
-
-get-genome:
-	wget http://plasmodb.org/common/downloads/release-11.0/Pfalciparum3D7/fasta/data/PlasmoDB-11.0_Pfalciparum3D7_Genome.fasta -O $(GENOME)
-
-get-transcripts:
-	wget http://plasmodb.org/common/downloads/release-11.0/Pfalciparum3D7/fasta/data/PlasmoDB-11.0_Pfalciparum3D7_AnnotatedTranscripts.fasta -O $(TRANSCRIPTS)
-
-get-aliases:
-	wget http://plasmodb.org/common/downloads/release-11.0/Pfalciparum3D7/txt/PlasmoDB-11.0_Pfalciparum3D7_GeneAliases.txt -O $(ALIASES)
+## CLEAN -----------------------------------------------------------------------
+clean: 
 
 
-# EDIT-DATA ###################################################################
-edit-data: make-gff make-genome make-annotations
-
-make-gff:
-	$(BIN)/strip-fasta-from-gff -i $(GFFWITHFASTA) -o $(GFF)
-	rm -rf $(GFFWITHFASTA)
-
-make-genome:
-	samtools faidx $(GENOME)
-	cut -f1,2 $(GENOMEIDX) > $(BEDGENOME)
-
-make-annotations:
-	cat $(GFF) | awk $$3 ~ /exon/ || NR ==1 {print $$0} > $(EXONS)
-	cat $(GFF) | awk $$3 ~ /gene/ || NR ==1 {print $$0} > $(GENES)
-	cat $(GFF) | awk $$3 ~ /mRNA/ || NR ==1 {print $$0} > $(MRNAS)
-	bedtools complement -i $(EXONS) -g $(BEDGENOME) | bedtools intersect -a - -b $(GENES) > $(INTRONS)
-	bedtools complement -i $(EXONS) -g $(BEDGENOME) | bedtools intersect -a - -b $(GENES) -v > $(INTERGENIC)
-
-
-# CLEAN #######################################################################
-clean: clean-results
-
-clean-results:
-	rm -rf $(RESULTS)/* 
-
-.PHONY: help clean all get-data edit-data' > $( pwd )/Makefile
+.PHONY: help all clean" > $( pwd )/Makefile
 
 exit

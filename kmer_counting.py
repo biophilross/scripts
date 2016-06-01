@@ -4,11 +4,6 @@
 """
 Description: Read in fasta file line by line and record every kmer
 as defined by the user
-
- __author__   = "Philipp Ross"
- __license__  = "Apache v2.0"
-
-Version 1.0
 """
 
 # import modules
@@ -23,17 +18,13 @@ def main():
                                      description = "Compute metrics of kmers within fasta file")
     parser.add_argument("-f", dest = "fasta_file", help = "Fasta file")
     parser.add_argument("-k", dest = "kmer_length", help = "Kmer length")
+    if len(sys.argv)==1:
+      parser.print_help()
+      sys.exit(1)
     args = parser.parse_args()
 
     fasta_file = args.fasta_file
     kmer_len = args.kmer_length
-
-
-    if(not fasta_file.endswith('.fasta') or not fasta_file.endswith('.fa')):
-        print >> sys.stderr, "File must be in fasta format!"
-        print >> sys.stderr, "Use seqtk or another tool to convert to fasta first"
-        sys.exit(1)
-
 
     #---- STEP1: build a hash with all kmers from the reads ----#
     seqs = 0
@@ -47,7 +38,7 @@ def main():
             else:
                 seq = line.rstrip()
                 for i in range(len(seq)):
-                    if(int(kmer_len) + i <= len(read)):
+                    if(int(kmer_len) + i <= len(seq)):
                         kmer = seq[i:int(kmer_len) + i]
                         if(kmer not in kmers):
                             kmers[kmer] = 1
